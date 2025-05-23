@@ -23,7 +23,8 @@ This Python script automatically creates Jira issues from alert JSON files. It c
 Download the script:
 
 ```bash
-wget https://your-repo-url/create_jira_ticket.py
+https://github.com/krishz-kishore/Wazuh-Jira-Alert-Automation-Script.git
+cd Wazuh-Jira-Alert-Automation-Script
 chmod +x create_jira_ticket.py
 ```
 
