@@ -10,76 +10,142 @@ issue_type_name = 'Submit a request or incident'
 custom_value = "custom_value"  # Your exact customfield value
 
 def create_jira_description(alert_json):
-    """Create detailed Jira description in Atlassian Document Format (ADF) from alert data."""
-    content = []
-
-    def paragraph(text):
+    """Create detailed Jira description in Atlassian Document Format (ADF) with separate tables for each section and a bold, large heading for the title."""
+    def heading(text, level=2):
         return {
-            "type": "paragraph",
+            "type": "heading",
+            "attrs": {"level": level},
             "content": [{"type": "text", "text": text}]
         }
 
-    # Alert Details section
-    content.append(paragraph("*Alert Details:*"))
-    content.append(paragraph(f"- Rule ID: {alert_json['rule'].get('id', 'N/A')}"))
-    content.append(paragraph(f"- Level: {alert_json['rule'].get('level', 'N/A')}"))
-    content.append(paragraph(f"- Description: {alert_json['rule'].get('description', 'N/A')}"))
-    content.append(paragraph(f"- Timestamp: {alert_json.get('timestamp', 'N/A')}"))
-    content.append(paragraph(f"- Rule Groups: {', '.join(alert_json['rule'].get('groups', [])) if 'groups' in alert_json['rule'] else 'N/A'}"))
-    content.append(paragraph(f"- Rule Fired Times: {alert_json['rule'].get('firedtimes', 'N/A')}"))
-    content.append(paragraph(f"- Rule Info: {alert_json['rule'].get('info', 'N/A')}"))
+    def table_row(cells):
+        return {
+            "type": "tableRow",
+            "content": [
+                {"type": "tableCell", "content": [{"type": "paragraph", "content": [{"type": "text", "text": str(cell)}]}]} for cell in cells
+            ]
+        }
 
-    # Agent Information
-    content.append(paragraph("\n*Agent Information:*"))
-    content.append(paragraph(f"- Agent Name: {alert_json['agent'].get('name', 'N/A')}"))
-    content.append(paragraph(f"- Agent ID: {alert_json['agent'].get('id', 'N/A')}"))
-    content.append(paragraph(f"- Agent IP: {alert_json['agent'].get('ip', 'N/A')}"))
-    content.append(paragraph(f"- Agent Version: {alert_json['agent'].get('version', 'N/A')}"))
+    def make_table(rows):
+        return {
+            "type": "table",
+            "content": rows
+        }
 
-    # Manager Information
+    content = []
+
+    # Title as bold, large heading (Heading 2)
+    summary = alert_json.get('rule', {}).get('description', 'SIEM Alert')
+    content.append(heading(f"SIEM Alert: {summary}", 2))
+
+    # Alert Details Table
+    alert_details = [
+        ("Rule ID", alert_json.get('rule', {}).get('id', 'N/A')),
+        ("Level", alert_json.get('rule', {}).get('level', 'N/A')),
+        ("Description", alert_json.get('rule', {}).get('description', 'N/A')),
+        ("Timestamp", alert_json.get('timestamp', 'N/A')),
+        ("Rule Groups", ', '.join(alert_json.get('rule', {}).get('groups', [])) if 'groups' in alert_json.get('rule', {}) else 'N/A'),
+        ("Rule Fired Times", alert_json.get('rule', {}).get('firedtimes', 'N/A')),
+        ("Rule Info", alert_json.get('rule', {}).get('info', 'N/A'))
+    ]
+    rows = [table_row(["Field", "Value"])]
+    for field, value in alert_details:
+        if value and value != 'N/A':
+            rows.append(table_row([field, value]))
+    content.append(heading("Alert Details", 3))
+    content.append(make_table(rows))
+
+    # Agent Information Table
+    agent = alert_json.get('agent', {})
+    agent_details = [
+        ("Agent Name", agent.get('name', 'N/A')),
+        ("Agent ID", agent.get('id', 'N/A')),
+        ("Agent IP", agent.get('ip', 'N/A')),
+        ("Agent Version", agent.get('version', 'N/A'))
+    ]
+    rows = [table_row(["Field", "Value"])]
+    for field, value in agent_details:
+        if value and value != 'N/A':
+            rows.append(table_row([field, value]))
+    content.append(heading("Agent Information", 3))
+    content.append(make_table(rows))
+
+    # Manager Information Table
     if 'manager' in alert_json:
-        content.append(paragraph("\n*Manager Information:*"))
-        content.append(paragraph(f"- Manager Name: {alert_json['manager'].get('name', 'N/A')}"))
+        manager = alert_json['manager']
+        manager_details = [("Manager Name", manager.get('name', 'N/A'))]
+        rows = [table_row(["Field", "Value"])]
+        for field, value in manager_details:
+            if value and value != 'N/A':
+                rows.append(table_row([field, value]))
+        content.append(heading("Manager Information", 3))
+        content.append(make_table(rows))
 
-    # Source Information
+    # Source/Destination Information Table
+    src_dst_details = []
     if 'srcip' in alert_json:
-        content.append(paragraph(f"- Source IP: {alert_json.get('srcip', 'N/A')}"))
+        src_dst_details.append(("Source IP", alert_json.get('srcip', 'N/A')))
     if 'srcport' in alert_json:
-        content.append(paragraph(f"- Source Port: {alert_json.get('srcport', 'N/A')}"))
+        src_dst_details.append(("Source Port", alert_json.get('srcport', 'N/A')))
     if 'dstip' in alert_json:
-        content.append(paragraph(f"- Destination IP: {alert_json.get('dstip', 'N/A')}"))
+        src_dst_details.append(("Destination IP", alert_json.get('dstip', 'N/A')))
     if 'dstport' in alert_json:
-        content.append(paragraph(f"- Destination Port: {alert_json.get('dstport', 'N/A')}"))
+        src_dst_details.append(("Destination Port", alert_json.get('dstport', 'N/A')))
+    if src_dst_details:
+        rows = [table_row(["Field", "Value"])]
+        for field, value in src_dst_details:
+            if value and value != 'N/A':
+                rows.append(table_row([field, value]))
+        content.append(heading("Source/Destination Information", 3))
+        content.append(make_table(rows))
 
-    # Event Data
+    # Event Data Table
     if 'data' in alert_json:
-        content.append(paragraph("\n*Event Data:*"))
-        for key, value in alert_json['data'].items():
-            content.append(paragraph(f"- {key}: {value}"))
+        event_items = alert_json['data'].items()
+        rows = [table_row(["Field", "Value"])]
+        for key, value in event_items:
+            if value:
+                rows.append(table_row([key, value]))
+        content.append(heading("Event Data", 3))
+        content.append(make_table(rows))
 
-    # Tags
+    # Tags Table
     if 'tags' in alert_json:
-        content.append(paragraph(f"\n*Tags:* {', '.join(alert_json['tags'])}"))
+        tags = ', '.join(alert_json['tags'])
+        rows = [table_row(["Field", "Value"]), table_row(["Tags", tags])]
+        content.append(heading("Tags", 3))
+        content.append(make_table(rows))
 
-    # Optional fields
+    # Full Log Table
     if 'full_log' in alert_json:
-        content.append(paragraph("\n*Full Log:*"))
-        content.append(paragraph(str(alert_json['full_log'])))
+        rows = [table_row(["Field", "Value"]), table_row(["Full Log", str(alert_json['full_log'])])]
+        content.append(heading("Full Log", 3))
+        content.append(make_table(rows))
 
+    # Location Table
     if 'location' in alert_json:
-        content.append(paragraph(f"\n*Location:* {alert_json['location']}"))
+        rows = [table_row(["Field", "Value"]), table_row(["Location", str(alert_json['location'])])]
+        content.append(heading("Location", 3))
+        content.append(make_table(rows))
 
-    # Additional context for analysts
+    # Additional Context Table
+    analyst_fields = []
     if 'user' in alert_json:
-        content.append(paragraph(f"\n*User:* {alert_json['user']}"))
+        analyst_fields.append(("User", alert_json['user']))
     if 'process' in alert_json:
-        content.append(paragraph(f"\n*Process:* {alert_json['process']}"))
+        analyst_fields.append(("Process", alert_json['process']))
     if 'file' in alert_json:
-        content.append(paragraph(f"\n*File:* {alert_json['file']}"))
+        analyst_fields.append(("File", alert_json['file']))
     if 'url' in alert_json:
-        content.append(paragraph(f"\n*URL:* {alert_json['url']}"))
+        analyst_fields.append(("URL", alert_json['url']))
+    if analyst_fields:
+        rows = [table_row(["Field", "Value"])]
+        for field, value in analyst_fields:
+            if value:
+                rows.append(table_row([field, value]))
+        content.append(heading("Additional Context", 3))
+        content.append(make_table(rows))
 
-    # Return Atlassian Document format
     return {
         "type": "doc",
         "version": 1,
