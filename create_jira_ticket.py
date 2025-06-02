@@ -21,23 +21,63 @@ def create_jira_description(alert_json):
 
     # Alert Details section
     content.append(paragraph("*Alert Details:*"))
-    content.append(paragraph(f"- Rule ID: {alert_json['rule']['id']}"))
-    content.append(paragraph(f"- Level: {alert_json['rule']['level']}"))
-    content.append(paragraph(f"- Description: {alert_json['rule']['description']}"))
-    content.append(paragraph(f"- Timestamp: {alert_json['timestamp']}"))
+    content.append(paragraph(f"- Rule ID: {alert_json['rule'].get('id', 'N/A')}"))
+    content.append(paragraph(f"- Level: {alert_json['rule'].get('level', 'N/A')}"))
+    content.append(paragraph(f"- Description: {alert_json['rule'].get('description', 'N/A')}"))
+    content.append(paragraph(f"- Timestamp: {alert_json.get('timestamp', 'N/A')}"))
+    content.append(paragraph(f"- Rule Groups: {', '.join(alert_json['rule'].get('groups', [])) if 'groups' in alert_json['rule'] else 'N/A'}"))
+    content.append(paragraph(f"- Rule Fired Times: {alert_json['rule'].get('firedtimes', 'N/A')}"))
+    content.append(paragraph(f"- Rule Info: {alert_json['rule'].get('info', 'N/A')}"))
 
     # Agent Information
     content.append(paragraph("\n*Agent Information:*"))
-    content.append(paragraph(f"- Agent Name: {alert_json['agent']['name']}"))
-    content.append(paragraph(f"- Agent ID: {alert_json['agent']['id']}"))
+    content.append(paragraph(f"- Agent Name: {alert_json['agent'].get('name', 'N/A')}"))
+    content.append(paragraph(f"- Agent ID: {alert_json['agent'].get('id', 'N/A')}"))
+    content.append(paragraph(f"- Agent IP: {alert_json['agent'].get('ip', 'N/A')}"))
+    content.append(paragraph(f"- Agent Version: {alert_json['agent'].get('version', 'N/A')}"))
+
+    # Manager Information
+    if 'manager' in alert_json:
+        content.append(paragraph("\n*Manager Information:*"))
+        content.append(paragraph(f"- Manager Name: {alert_json['manager'].get('name', 'N/A')}"))
+
+    # Source Information
+    if 'srcip' in alert_json:
+        content.append(paragraph(f"- Source IP: {alert_json.get('srcip', 'N/A')}"))
+    if 'srcport' in alert_json:
+        content.append(paragraph(f"- Source Port: {alert_json.get('srcport', 'N/A')}"))
+    if 'dstip' in alert_json:
+        content.append(paragraph(f"- Destination IP: {alert_json.get('dstip', 'N/A')}"))
+    if 'dstport' in alert_json:
+        content.append(paragraph(f"- Destination Port: {alert_json.get('dstport', 'N/A')}"))
+
+    # Event Data
+    if 'data' in alert_json:
+        content.append(paragraph("\n*Event Data:*"))
+        for key, value in alert_json['data'].items():
+            content.append(paragraph(f"- {key}: {value}"))
+
+    # Tags
+    if 'tags' in alert_json:
+        content.append(paragraph(f"\n*Tags:* {', '.join(alert_json['tags'])}"))
 
     # Optional fields
     if 'full_log' in alert_json:
         content.append(paragraph("\n*Full Log:*"))
-        content.append(paragraph(alert_json['full_log']))
+        content.append(paragraph(str(alert_json['full_log'])))
 
     if 'location' in alert_json:
         content.append(paragraph(f"\n*Location:* {alert_json['location']}"))
+
+    # Additional context for analysts
+    if 'user' in alert_json:
+        content.append(paragraph(f"\n*User:* {alert_json['user']}"))
+    if 'process' in alert_json:
+        content.append(paragraph(f"\n*Process:* {alert_json['process']}"))
+    if 'file' in alert_json:
+        content.append(paragraph(f"\n*File:* {alert_json['file']}"))
+    if 'url' in alert_json:
+        content.append(paragraph(f"\n*URL:* {alert_json['url']}"))
 
     # Return Atlassian Document format
     return {
